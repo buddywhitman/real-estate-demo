@@ -59,7 +59,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ properties, onAddP
 
   const handleMediaUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      const newMedia: PropertyMedia[] = Array.from(e.target.files).map(file => ({
+      const newMedia: PropertyMedia[] = Array.from(e.target.files).map((file: File) => ({
         id: Math.random().toString(36).substr(2, 9),
         type: file.type.startsWith('video') ? 'video' : 'image',
         url: URL.createObjectURL(file), // Create local preview blob
@@ -71,7 +71,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ properties, onAddP
 
   const handleDocUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      Array.from(e.target.files).forEach(file => {
+      Array.from(e.target.files).forEach((file: File) => {
         const reader = new FileReader();
         
         // For PDFs, we want to read as DataURL to get Base64 for the API

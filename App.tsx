@@ -156,6 +156,9 @@ export default function App() {
   const [isAiActive, setIsAiActive] = useState(true);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   
+  // Track the current active simulator lead ID to ensure persistent updates to the same row
+  const [simulatorLeadId, setSimulatorLeadId] = useState<string | null>(null);
+
   const [properties, setProperties] = useState<Property[]>(MOCK_PROPERTIES);
   const [leads, setLeads] = useState<Lead[]>(MOCK_LEADS);
   const [logs, setLogs] = useState<ActivityLog[]>([
@@ -163,11 +166,11 @@ export default function App() {
   ]);
   
   const [settings, setSettings] = useState<AppSettings>({
-    appName: 'Nexus AI',
-    brokerName: 'Nexus Brokerage',
+    appName: 'Guaq AI',
+    brokerName: 'Guaq Brokerage',
     autoReply: true,
     minConfidenceThreshold: 75,
-    notificationEmail: 'broker@nexus.com'
+    notificationEmail: 'broker@guaq.ai'
   });
 
   const addLog = (message: string, subtext: string, severity: ActivityLog['severity']) => {
@@ -210,35 +213,62 @@ export default function App() {
   };
 
   const handleBotUpdate = (data: GatekeeperResponse) => {
-    if (!isAiActive) return; // Ignore updates if AI is paused
+    if (!isAiActive) return; 
 
     if (!data.action || data.action === 'NONE') return;
 
-    if (data.action === 'CREATE_LEAD' || data.action === 'UPDATE_LEAD') {
-      const extracted = data.extractedData;
-      if (!extracted) return;
+    // Handle CREATE_LEAD, UPDATE_LEAD, and STOP_AI by ensuring the lead exists and is updated
+    if (data.action === 'CREATE_LEAD' || data.action === 'UPDATE_LEAD' || data.action === 'STOP_AI') {
+      const extracted = data.extractedData || {};
 
-      const leadName = 'Simulated User'; 
-      const existingLeadIndex = leads.findIndex(l => l.name === leadName);
+      // Determine the name: use extracted name from AI, or fallback
+      const currentName = extracted.name || 'New Lead';
+      
+      // Determine status override for STOP_AI
+      let newStatus = extracted.status ? (extracted.status as LeadStatus) : LeadStatus.NEW;
+      if (data.action === 'STOP_AI') {
+          newStatus = LeadStatus.STOP_AI;
+      }
+      
+      // Try to find an existing lead for this simulator session
+      let existingLeadIndex = -1;
+      
+      if (simulatorLeadId) {
+         existingLeadIndex = leads.findIndex(l => l.id === simulatorLeadId);
+      }
 
       if (existingLeadIndex >= 0) {
+         // Update Existing Lead
          const oldLead = leads[existingLeadIndex];
          const updatedLead: Lead = { 
             ...oldLead, 
             ...extracted,
-            status: extracted.status ? (extracted.status as LeadStatus) : oldLead.status,
+            name: extracted.name || oldLead.name, // Update name if AI found it
+            status: newStatus,
             interestedIn: [...new Set([...oldLead.interestedIn, ...(extracted.interestedIn || [])])],
+            siteVisitTime: extracted.siteVisitTime || oldLead.siteVisitTime,
             lastActive: 'Just now'
          };
          
          const newLeads = [...leads];
          newLeads[existingLeadIndex] = updatedLead;
          setLeads(newLeads);
-         addLog('Lead Updated', `${leadName} • Score: ${updatedLead.confidenceScore}`, 'success');
+         
+         // Log special events
+         if (updatedLead.status === LeadStatus.SITE_VISIT_SCHEDULED) {
+            addLog('Site Visit Scheduled', `${updatedLead.name} @ ${updatedLead.siteVisitTime || 'TBD'}`, 'success');
+         } else if (updatedLead.status === LeadStatus.STOP_AI) {
+            addLog('Manual Intervention', `Bot stopped for ${updatedLead.name}`, 'danger');
+         } else {
+            addLog('Lead Updated', `${updatedLead.name} • Score: ${updatedLead.confidenceScore}`, 'info');
+         }
+
       } else {
+         // Create New Lead
+         const newId = Math.random().toString();
          const newLead: Lead = {
-           id: Math.random().toString(),
-           name: leadName,
+           id: newId,
+           name: currentName,
            platform: 'Telegram',
            phone: '+91 98765 00000',
            lastActive: 'Just now',
@@ -246,15 +276,21 @@ export default function App() {
            conversationSummary: 'Generated via Simulator',
            interestedIn: [],
            budget: 'Unknown',
-           status: LeadStatus.NEW,
+           status: newStatus,
            confidenceScore: 0,
+           siteVisitTime: extracted.siteVisitTime,
            ...extracted
          } as Lead;
+         
+         setSimulatorLeadId(newId); // Bind this session to this new lead
          setLeads(prev => [newLead, ...prev]);
-         addLog('New Lead Captured', `${leadName} • Score: ${newLead.confidenceScore}`, 'info');
+         
+         if (newLead.status === LeadStatus.STOP_AI) {
+            addLog('Manual Intervention', `Bot stopped for ${newLead.name}`, 'danger');
+         } else {
+            addLog('New Lead Captured', `${currentName} • Score: ${newLead.confidenceScore}`, 'info');
+         }
       }
-    } else if (data.action === 'STOP_AI') {
-         addLog('Gatekeeper Handoff', 'AI stopped for Simulated User', 'warning');
     }
   };
 
@@ -268,9 +304,8 @@ export default function App() {
         onClose={() => setIsSidebarOpen(false)}
       />
       
-      {/* Main Content - Adjusted Padding for Responsive Sidebar */}
       <main className="lg:pl-64 transition-all duration-300 w-full">
-        {/* Header / Topbar */}
+        {/* Header */}
         <header className="sticky top-0 z-30 bg-[#050505]/80 backdrop-blur-md border-b border-glass-border px-4 md:px-8 py-4 flex justify-between items-center">
           <div className="flex items-center gap-4">
             <button 
@@ -293,7 +328,7 @@ export default function App() {
                 className="relative p-2 rounded-full hover:bg-white/5 text-gray-400 hover:text-white transition-colors"
               >
                 <Bell size={20} />
-                <span className="absolute top-1.5 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-black"></span>
+                {logs.length > 0 && <span className="absolute top-1.5 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-black"></span>}
               </button>
 
               {/* Notification Dropdown */}
@@ -303,23 +338,21 @@ export default function App() {
                       <h4 className="text-sm font-semibold text-white">Notifications</h4>
                    </div>
                    <div className="max-h-64 overflow-y-auto">
-                      <div className="p-3 border-b border-glass-border hover:bg-white/5 cursor-pointer">
-                         <div className="flex justify-between items-start mb-1">
-                            <span className="text-xs font-bold text-brand-400">New Lead</span>
-                            <span className="text-[10px] text-gray-500">2m ago</span>
-                         </div>
-                         <p className="text-xs text-gray-300">Pratham Shetty requested a site visit for Sobha Opal.</p>
-                      </div>
-                      <div className="p-3 border-b border-glass-border hover:bg-white/5 cursor-pointer">
-                         <div className="flex justify-between items-start mb-1">
-                            <span className="text-xs font-bold text-yellow-400">System Alert</span>
-                            <span className="text-[10px] text-gray-500">1h ago</span>
-                         </div>
-                         <p className="text-xs text-gray-300">Daily backup completed successfully.</p>
-                      </div>
+                      {logs.slice(0, 8).map(log => (
+                        <div key={log.id} className="p-3 border-b border-glass-border hover:bg-white/5 cursor-pointer">
+                           <div className="flex justify-between items-start mb-1">
+                              <span className={`text-xs font-bold ${
+                                log.severity === 'success' ? 'text-green-400' : 
+                                log.severity === 'danger' ? 'text-red-400' : 'text-brand-400'
+                              }`}>{log.message}</span>
+                              <span className="text-[10px] text-gray-500">{log.timestamp.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+                           </div>
+                           <p className="text-xs text-gray-300">{log.subtext}</p>
+                        </div>
+                      ))}
                    </div>
                    <div className="p-2 text-center border-t border-glass-border bg-white/5">
-                      <button className="text-xs text-gray-400 hover:text-white">Mark all as read</button>
+                      <button className="text-xs text-gray-400 hover:text-white">View Full Activity Log</button>
                    </div>
                 </div>
               )}

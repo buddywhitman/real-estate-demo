@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Lead, LeadStatus } from '../types';
-import { MessageSquare, Phone, Send, Search, Filter, AlertCircle, CheckCircle2, Clock, Trash2, Mail, ArrowUpDown, X, Sparkles } from 'lucide-react';
+import { MessageSquare, Phone, Send, Search, Filter, AlertCircle, CheckCircle2, Clock, Trash2, Mail, ArrowUpDown, X, Sparkles, CalendarDays } from 'lucide-react';
 import { GlassCard } from './GlassCard';
 
 interface LeadsViewProps {
@@ -158,7 +158,7 @@ export const LeadsView: React.FC<LeadsViewProps> = ({ leads, onDeleteLeads }) =>
           </div>
         ) : (
         <div className="overflow-x-auto flex-1 w-full">
-          <table className="w-full text-left border-collapse min-w-[800px]">
+          <table className="w-full text-left border-collapse min-w-[900px]">
             <thead>
               <tr className="bg-white/5 text-xs uppercase tracking-wider text-gray-400 border-b border-glass-border">
                 <th className="p-4 font-medium w-12">
@@ -172,6 +172,7 @@ export const LeadsView: React.FC<LeadsViewProps> = ({ leads, onDeleteLeads }) =>
                 <th className="p-4 font-medium cursor-pointer hover:text-white" onClick={() => handleSort('name')}>Business/Name</th>
                 <th className="p-4 font-medium">Platform</th>
                 <th className="p-4 font-medium">Interest</th>
+                <th className="p-4 font-medium">Site Visit Pref</th>
                 <th className="p-4 font-medium">AI Summary</th>
                 <th className="p-4 font-medium cursor-pointer hover:text-white" onClick={() => handleSort('confidenceScore')}>Pot. Score</th>
                 <th className="p-4 font-medium cursor-pointer hover:text-white" onClick={() => handleSort('status')}>Status</th>
@@ -210,6 +211,16 @@ export const LeadsView: React.FC<LeadsViewProps> = ({ leads, onDeleteLeads }) =>
                       ))}
                       <div className="text-xs text-gray-500 mt-1">Budget: {lead.budget}</div>
                     </div>
+                  </td>
+                  <td className="p-4">
+                     {lead.siteVisitTime ? (
+                        <div className="flex items-center gap-1.5 text-xs text-brand-400 bg-brand-500/10 px-2 py-1 rounded w-fit">
+                           <CalendarDays size={12} />
+                           {lead.siteVisitTime}
+                        </div>
+                     ) : (
+                        <span className="text-xs text-gray-600">-</span>
+                     )}
                   </td>
                   <td className="p-4 max-w-xs">
                     <div className="flex items-start gap-2 group/summary">

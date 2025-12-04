@@ -1,16 +1,22 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { GlassCard } from './GlassCard';
-import { Send, Bot, RefreshCw, Smartphone, PlayCircle } from 'lucide-react';
-import { gatekeeperChat } from '../services/geminiService';
+import { Send, Bot, RefreshCw, Smartphone, PlayCircle, Image as ImageIcon, FileText, Download, Film } from 'lucide-react';
+import { gatekeeperChat, GatekeeperResponse } from '../services/geminiService';
 import { Property } from '../types';
 
 interface BotSimulatorProps {
   inventory: Property[];
-  onLeadUpdate: (data: any) => void;
+  onLeadUpdate: (data: GatekeeperResponse) => void;
+}
+
+interface ChatMessage {
+  sender: 'user' | 'bot';
+  text: string;
+  attachments?: Property[]; // Properties to show cards for
 }
 
 export const BotSimulator: React.FC<BotSimulatorProps> = ({ inventory, onLeadUpdate }) => {
-  const [messages, setMessages] = useState<{ sender: 'user' | 'bot', text: string }[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [debugLog, setDebugLog] = useState<string[]>(['System initialized. Ready for simulation.']);
@@ -25,35 +31,50 @@ export const BotSimulator: React.FC<BotSimulatorProps> = ({ inventory, onLeadUpd
 
   const processResponse = async (userMsg: string, currentHistory: { sender: 'user' | 'bot', text: string }[]) => {
     setIsTyping(true);
-    // Call Gemini with updated history
-    const result = await gatekeeperChat(userMsg, currentHistory, inventory);
-    
-    setIsTyping(false);
-    setMessages(prev => [...prev, { sender: 'bot', text: result.botReply }]);
-    
-    // Log actions
-    const logs = [`Bot replied: "${result.botReply.substring(0, 40)}..."`];
-    if (result.action && result.action !== 'NONE') {
-      logs.push(`ACTION TRIGGERED: ${result.action}`);
-      if (result.extractedData) {
-        logs.push(`Data Extracted: ${JSON.stringify(result.extractedData, null, 2)}`);
-        onLeadUpdate(result);
+    try {
+      // Call Gemini with updated history
+      const result = await gatekeeperChat(userMsg, currentHistory, inventory);
+      
+      // Construct new bot message with potential attachments
+      const botMsg: ChatMessage = {
+        sender: 'bot',
+        text: result.botReply,
+        attachments: result.suggestedProperties
+      };
+
+      setMessages(prev => [...prev, botMsg]);
+      
+      // Log actions
+      const logs = [`Bot replied: "${result.botReply.substring(0, 40)}..."`];
+      if (result.action && result.action !== 'NONE') {
+        logs.push(`ACTION TRIGGERED: ${result.action}`);
+        if (result.extractedData) {
+          logs.push(`Data Extracted: ${JSON.stringify(result.extractedData, null, 2)}`);
+          onLeadUpdate(result);
+        }
       }
+      setDebugLog(prev => [...prev, ...logs]);
+    } catch (error) {
+      console.error("Simulation Error:", error);
+      setDebugLog(prev => [...prev, `ERROR: ${error}`]);
+      setMessages(prev => [...prev, { sender: 'bot', text: "System Error: Unable to process response." }]);
+    } finally {
+      setIsTyping(false);
     }
-    setDebugLog(prev => [...prev, ...logs]);
   };
 
   const handleSend = async () => {
     if (!input.trim()) return;
     
     const userMsg = input;
-    const newHistory = [...messages, { sender: 'user', text: userMsg } as const];
+    const newHistory = messages.map(m => ({ sender: m.sender, text: m.text }));
+    const updatedHistory = [...newHistory, { sender: 'user', text: userMsg } as const];
     
-    setMessages(newHistory);
+    setMessages(prev => [...prev, { sender: 'user', text: userMsg }]);
     setInput('');
     setDebugLog(prev => [...prev, `User sent: "${userMsg}"`]);
     
-    await processResponse(userMsg, newHistory);
+    await processResponse(userMsg, updatedHistory);
   };
 
   const handleSimulateIncoming = async () => {
@@ -61,7 +82,7 @@ export const BotSimulator: React.FC<BotSimulatorProps> = ({ inventory, onLeadUpd
      const triggerMsg = "Hi! I saw your ad on Instagram. I am looking for a property.";
      const newHistory = [{ sender: 'user', text: triggerMsg } as const];
      
-     setMessages(newHistory);
+     setMessages([{ sender: 'user', text: triggerMsg }]);
      setDebugLog(prev => [...prev, `Simulating incoming lead trigger...`]);
      
      await processResponse(triggerMsg, newHistory);
@@ -81,7 +102,7 @@ export const BotSimulator: React.FC<BotSimulatorProps> = ({ inventory, onLeadUpd
                 <Bot size={20} />
              </div>
              <div>
-               <h3 className="text-white font-medium text-sm">Nexus Assistant</h3>
+               <h3 className="text-white font-medium text-sm">Guaq Assistant</h3>
                <p className="text-brand-400 text-xs">bot</p>
              </div>
            </div>
@@ -100,16 +121,62 @@ export const BotSimulator: React.FC<BotSimulatorProps> = ({ inventory, onLeadUpd
               )}
 
               {messages.map((msg, i) => (
-                <div key={i} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[80%] p-3 rounded-2xl text-sm ${
+                <div key={i} className={`flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}>
+                  <div className={`max-w-[85%] p-3 rounded-2xl text-sm ${
                     msg.sender === 'user' 
                     ? 'bg-brand-600 text-white rounded-br-sm' 
                     : 'bg-[#1e2329] text-gray-200 rounded-bl-sm'
                   }`}>
                     {msg.text}
                   </div>
+
+                  {/* Render Attachments (Media/Docs) */}
+                  {msg.attachments && msg.attachments.length > 0 && (
+                     <div className="mt-2 space-y-2 w-full max-w-[85%]">
+                        {msg.attachments.map(prop => (
+                           <div key={prop.id} className="bg-[#1e2329] rounded-xl overflow-hidden border border-gray-800">
+                              {/* Media Gallery */}
+                              {prop.media && prop.media.length > 0 ? (
+                                <div className="h-32 bg-gray-800 relative">
+                                   {prop.media[0].type === 'video' ? (
+                                      <div className="w-full h-full flex items-center justify-center"><Film size={24} className="text-gray-500"/></div>
+                                   ) : (
+                                      <img src={prop.media[0].url} className="w-full h-full object-cover" alt={prop.title} />
+                                   )}
+                                   <div className="absolute bottom-1 right-1 bg-black/60 text-white text-[10px] px-1.5 rounded">
+                                      {prop.media.length} items
+                                   </div>
+                                </div>
+                              ) : (
+                                <div className="h-24 bg-gray-800 flex items-center justify-center">
+                                   <ImageIcon className="text-gray-600" />
+                                </div>
+                              )}
+                              
+                              <div className="p-2">
+                                 <h4 className="text-xs font-bold text-white truncate">{prop.title}</h4>
+                                 <p className="text-[10px] text-gray-400">{prop.location} • {prop.price}</p>
+                              </div>
+
+                              {/* Documents */}
+                              {prop.documents && prop.documents.length > 0 && (
+                                 <div className="border-t border-gray-800 p-2 space-y-1">
+                                    {prop.documents.map(doc => (
+                                       <div key={doc.id} className="flex items-center gap-2 text-xs text-brand-400 p-1 hover:bg-white/5 rounded cursor-pointer">
+                                          <FileText size={12} />
+                                          <span className="truncate flex-1">{doc.name}</span>
+                                          <Download size={12} />
+                                       </div>
+                                    ))}
+                                 </div>
+                              )}
+                           </div>
+                        ))}
+                     </div>
+                  )}
                 </div>
               ))}
+              
               {isTyping && (
                 <div className="flex justify-start">
                   <div className="bg-[#1e2329] px-4 py-3 rounded-2xl rounded-bl-sm flex gap-1">
@@ -168,6 +235,7 @@ export const BotSimulator: React.FC<BotSimulatorProps> = ({ inventory, onLeadUpd
              <div key={i} className={`p-2 rounded border-l-2 whitespace-pre-wrap ${
                log.includes('ACTION') ? 'bg-green-500/10 border-green-500 text-green-300' : 
                log.includes('Bot') ? 'bg-blue-500/10 border-blue-500 text-blue-300' :
+               log.includes('ERROR') ? 'bg-red-500/10 border-red-500 text-red-300' :
                'bg-white/5 border-gray-600 text-gray-400'
              }`}>
                {log}
