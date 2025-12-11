@@ -17,8 +17,8 @@
   - Authentication state (`userRole`, `onLogout`) should be handled by `useSession()` from NextAuth.
 */
 
-import React from 'react';
-import { LayoutDashboard, Users, Building2, Settings, HelpCircle, LogOut, Bot, X, Calendar, Database, Film, PieChart, FileCheck, Search, Image as ImageIcon, Crown, BadgeCheck } from 'lucide-react';
+import React, { useState } from 'react';
+import { LayoutDashboard, Users, Building2, Settings, HelpCircle, LogOut, Bot, X, Calendar, Database, Film, PieChart, FileCheck, Search, Image as ImageIcon, Crown, BadgeCheck, Code, PanelLeftClose } from 'lucide-react';
 import { NavItem, AppSettings } from '../types';
 
 interface SidebarProps {
@@ -29,9 +29,21 @@ interface SidebarProps {
   onClose: () => void;
   onLogout: () => void;
   userRole?: 'admin' | 'agent';
+  isDesktopOpen?: boolean;
+  onDesktopClose?: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, settings, isOpen, onClose, onLogout, userRole = 'admin' }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ 
+  activeTab, 
+  onTabChange, 
+  settings, 
+  isOpen, 
+  onClose, 
+  onLogout, 
+  userRole = 'admin',
+  isDesktopOpen = true,
+  onDesktopClose
+}) => {
   const navItems: NavItem[] = [
     { id: 'dashboard', label: 'Overview', icon: LayoutDashboard },
     { id: 'leads', label: 'Leads Pipeline', icon: Users },
@@ -69,7 +81,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, settin
 
       <aside className={`
         fixed top-0 left-0 h-screen w-64 bg-[#0a0a0a] border-r border-glass-border flex flex-col z-50 transition-transform duration-300 ease-in-out
-        ${isOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0
+        ${isOpen ? 'translate-x-0' : '-translate-x-full'} 
+        ${isDesktopOpen ? 'lg:translate-x-0' : 'lg:-translate-x-full'}
       `}>
         {/* Brand Header */}
         <div className="p-6 flex justify-between items-center shrink-0">
@@ -79,8 +92,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, settin
              </div>
              <span className="font-bold text-lg tracking-tight text-white truncate max-w-[140px]">{settings.appName}</span>
           </div>
+          {/* Mobile Close */}
           <button onClick={onClose} className="lg:hidden text-gray-400 hover:text-white">
             <X size={24} />
+          </button>
+          
+          {/* Desktop Collapse Button */}
+          <button 
+             onClick={onDesktopClose} 
+             className="hidden lg:block text-gray-500 hover:text-white transition-colors"
+             title="Hide Sidebar"
+          >
+             <PanelLeftClose size={20} />
           </button>
         </div>
 
@@ -114,6 +137,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, settin
               </button>
             );
           })}
+          
+          {/* DEMO: 404 Trigger */}
+          <button
+            onClick={() => handleNavClick('developer-api')}
+            className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 group text-gray-400 hover:bg-white/5 hover:text-white`}
+          >
+             <Code size={18} className="text-gray-500 group-hover:text-white" />
+             <span className="font-medium text-sm">Developer API</span>
+          </button>
         </nav>
 
         {/* User Profile Footer */}
