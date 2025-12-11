@@ -75,7 +75,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, branding }) => {
             // Swipe Down to go back to Login
             // Only if we started at the top AND are currently at the top
             if (distance < -minSwipeDistance) {
-                 if (startScrollTop.current <= 0 && pricingScrollRef.current?.scrollTop === 0) {
+                 if (startScrollTop.current <= 0 && (pricingScrollRef.current?.scrollTop || 0) <= 1) {
                      setShowPricing(false);
                  }
             }

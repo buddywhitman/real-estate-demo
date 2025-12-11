@@ -31,7 +31,9 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { Property, Lead, LeadStatus, ComplianceReport, ScrapedListing, AppSettings } from '../types';
 import { CODEBASE_CONTEXT } from "../constants";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const apiKey = import.meta.env?.VITE_API_KEY || process.env.API_KEY;
+console.log("DEBUG: Legacy Real Estate Demo API Key Present:", !!apiKey);
+const ai = new GoogleGenAI({ apiKey });
 
 // --- Support Bot ---
 export const askSupportBot = async (userQuery: string): Promise<string> => {
