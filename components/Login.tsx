@@ -44,12 +44,17 @@ const Login: React.FC<LoginProps> = ({ onLogin, branding }) => {
         if (showPricing) {
             // Pricing View: Scroll Up at top -> Go to Login
             if (pricingScrollRef.current && pricingScrollRef.current.scrollTop === 0) {
-                if (e.deltaY < -50) {
+                if (e.deltaY < -30) {
                     setShowPricing(false);
                 }
             }
+        } else {
+            // Login View: Scroll Down -> Go to Pricing
+            // We use a threshold to prevent accidental triggers from tiny movements
+            if (e.deltaY > 30) {
+                setShowPricing(true);
+            }
         }
-        // Disabled auto-scroll DOWN to pricing to prevent accidental triggers while scrolling form
     };
 
     const handleTouchStart = (e: TouchEvent) => {
@@ -74,8 +79,12 @@ const Login: React.FC<LoginProps> = ({ onLogin, branding }) => {
                      setShowPricing(false);
                  }
             }
+        } else {
+            // Swipe Up to go to Pricing
+            if (distance > minSwipeDistance) {
+                setShowPricing(true);
+            }
         }
-        // Disabled auto-swipe UP to pricing
     };
 
     window.addEventListener('wheel', handleWheel);

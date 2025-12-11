@@ -221,7 +221,6 @@ export default function App() {
   
   const [settings, setSettings] = useState<AppSettings>({
     appName: 'Guaq AI',
-    brokerName: 'Guaq Brokerage', // Legacy field backup
     autoReply: true,
     minConfidenceThreshold: 75,
     notificationEmail: 'broker@guaq.ai',
@@ -229,8 +228,6 @@ export default function App() {
     workHoursStart: '09:00',
     workHoursEnd: '18:00',
     accentColor: 'blue',
-    messageSalutation: 'Hi {name},',
-    messageSignature: 'Best,\n{brokerName}',
     workDays: [1, 2, 3, 4, 5],
     
     // New Identity Defaults for Magic Draft
