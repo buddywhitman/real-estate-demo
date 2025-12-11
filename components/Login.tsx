@@ -74,8 +74,8 @@ const Login: React.FC<LoginProps> = ({ onLogin, branding }) => {
         if (showPricing) {
             // Swipe Down to go back to Login
             // Only if we started at the top AND are currently at the top
-            if (distance < -minSwipeDistance) {
-                 if (startScrollTop.current <= 0 && (pricingScrollRef.current?.scrollTop || 0) <= 1) {
+            if (distance < -30) {
+                 if (startScrollTop.current <= 5 && (pricingScrollRef.current?.scrollTop || 0) <= 5) {
                      setShowPricing(false);
                  }
             }
@@ -130,15 +130,14 @@ const Login: React.FC<LoginProps> = ({ onLogin, branding }) => {
                 - h-[100dvh]: Takes full viewport height.
                 - flex flex-col: Stacks Form (flex-1) and Pricing Button (shrink-0).
             */}
-            <div className="h-[100dvh] w-full flex flex-col relative overflow-hidden">
+            <div className="h-[100dvh] w-full flex flex-col relative overflow-y-auto custom-scrollbar">
                 
                 {/* 
                     Card Container:
-                    - flex-1: Takes up all available space between top of screen and pricing button.
-                    - flex items-center justify-center: Centers the card PERFECTLY in that space.
-                    - No pt-12 or similar fixed padding that causes asymmetry.
+                    - flex-1: Takes up all available space.
+                    - min-h: Ensures it doesn't collapse too small.
                 */}
-                <div className="flex-1 flex items-center justify-center p-4">
+                <div className="flex-1 flex items-center justify-center p-4 min-h-[600px]">
                     <div className="relative z-10 w-full max-w-md">
                         <div className="backdrop-blur-xl bg-glass-100 p-8 rounded-3xl border border-white/10 shadow-2xl">
                         

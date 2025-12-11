@@ -33,8 +33,8 @@ const Footer: React.FC = () => {
              <div className="hidden md:block h-3 w-[1px] bg-white/10"></div>
              <div className="flex gap-3">
                 <a href="https://twitter.com/guaq_ai" target="_blank" rel="noopener noreferrer" className="hover:text-blue-400 transition"><Twitter size={12}/></a>
-                <a href="https://linkedin.com/company/guaq-ai" target="_blank" rel="noopener noreferrer" className="hover:text-blue-600 transition"><Linkedin size={12}/></a>
-                <a href="https://instagram.com/guaq.ai" target="_blank" rel="noopener noreferrer" className="hover:text-pink-500 transition"><Instagram size={12}/></a>
+                <a href="https://www.linkedin.com/company/guaq-ai" target="_blank" rel="noopener noreferrer" className="hover:text-blue-600 transition"><Linkedin size={12}/></a>
+                <a href="https://www.instagram.com/guaq.ai" target="_blank" rel="noopener noreferrer" className="hover:text-pink-500 transition"><Instagram size={12}/></a>
              </div>
         </div>
       </div>

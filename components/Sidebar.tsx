@@ -138,14 +138,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             );
           })}
           
-          {/* DEMO: 404 Trigger */}
-          <button
-            onClick={() => handleNavClick('developer-api')}
-            className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 group text-gray-400 hover:bg-white/5 hover:text-white`}
-          >
-             <Code size={18} className="text-gray-500 group-hover:text-white" />
-             <span className="font-medium text-sm">Developer API</span>
-          </button>
+          {/* DEMO: 404 Trigger - REMOVED */}
         </nav>
 
         {/* User Profile Footer */}
