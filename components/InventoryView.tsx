@@ -1,3 +1,28 @@
+/*
+  ===========================================================================================
+  INVENTORY MANAGEMENT VIEW
+  ===========================================================================================
+  
+  FUNCTIONALITY:
+  - CRUD operations for properties.
+  - Image/Video upload handling.
+  - Document (PDF) upload for RAG training.
+  - AI Description Generation.
+  
+  BACKEND INTEGRATION:
+  - `onAddProperty` -> `POST /api/inventory`
+  - `onUpdateProperty` -> `PUT /api/inventory/:id`
+  - `onDeleteProperty` -> `DELETE /api/inventory/:id`
+  
+  FILE UPLOAD STRATEGY (MINIO):
+  - Current mock: Uses `URL.createObjectURL` for local preview.
+  - Production (Agency Infra): 
+    1. Request Pre-signed URL from Backend (which talks to MinIO).
+    2. PUT file directly to MinIO bucket `agency-assets`.
+    3. Path format: `/{client_id}/properties/{property_id}/{filename}`.
+    4. Save the MinIO URL in the `properties` table (JSONB column).
+*/
+
 import React, { useState, useRef } from 'react';
 import { Property, PropertyStatus, PropertyMedia, PropertyDocument } from '../types';
 import { GlassCard } from './GlassCard';

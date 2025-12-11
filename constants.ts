@@ -123,7 +123,40 @@ export const MOCK_PROPERTIES: Property[] = [
   }
 ];
 
+// GENERATED MOCK LEADS
+const NAMES = ["Aarav", "Vivaan", "Aditya", "Vihaan", "Arjun", "Sai", "Reyansh", "Ayaan", "Krishna", "Ishaan", "Diya", "Saanvi", "Ananya", "Aadhya", "Pari", "Anika", "Navya", "Angel", "Myra", "Riya"];
+const LAST_NAMES = ["Sharma", "Verma", "Gupta", "Malhotra", "Singh", "Patel", "Reddy", "Nair", "Iyer", "Kumar", "Das", "Mukherjee", "Rao", "Mehta", "Jain", "Saxena", "Chopra", "Desai", "Joshi", "Bhat"];
+const PLATFORMS = ['Telegram', 'WhatsApp', 'Web'];
+const STATUSES = [LeadStatus.NEW, LeadStatus.QUALIFIED, LeadStatus.COLD, LeadStatus.SITE_VISIT_SCHEDULED, LeadStatus.NEGOTIATION];
+
+const generateLeads = (count: number): Lead[] => {
+  const leads: Lead[] = [];
+  for (let i = 0; i < count; i++) {
+    const fn = NAMES[Math.floor(Math.random() * NAMES.length)];
+    const ln = LAST_NAMES[Math.floor(Math.random() * LAST_NAMES.length)];
+    const status = STATUSES[Math.floor(Math.random() * STATUSES.length)];
+    const conf = Math.floor(Math.random() * 100);
+    
+    leads.push({
+      id: `gen_${i}`,
+      name: `${fn} ${ln}`,
+      platform: PLATFORMS[Math.floor(Math.random() * PLATFORMS.length)] as any,
+      phone: `+91 ${9000000000 + i}`,
+      budget: `${(Math.random() * 5 + 0.5).toFixed(1)} Cr`,
+      interestedIn: [MOCK_PROPERTIES[Math.floor(Math.random() * MOCK_PROPERTIES.length)].title],
+      status: status,
+      lastActive: `${Math.floor(Math.random() * 24)}h ago`,
+      conversationSummary: `Interested in ${status === LeadStatus.SITE_VISIT_SCHEDULED ? 'visiting' : 'buying'} a property. Budget confirmed.`,
+      confidenceScore: conf,
+      chatHistory: [],
+      siteVisitTime: status === LeadStatus.SITE_VISIT_SCHEDULED ? 'Tomorrow 11 AM' : undefined
+    });
+  }
+  return leads;
+};
+
 export const MOCK_LEADS: Lead[] = [
+  ...generateLeads(25), // Generate 25 random leads
   {
     id: 'l1',
     name: 'Pratham Shetty',
@@ -164,19 +197,6 @@ export const MOCK_LEADS: Lead[] = [
     chatHistory: []
   },
   {
-    id: 'l4',
-    name: 'Suresh Raina',
-    platform: 'Telegram',
-    phone: '+919000011111',
-    budget: '1 Cr',
-    interestedIn: ['Prestige Pinewood'],
-    status: LeadStatus.COLD,
-    lastActive: '3 days ago',
-    conversationSummary: 'Stopped responding after price disclosure.',
-    confidenceScore: 20,
-    chatHistory: []
-  },
-  {
     id: 'l5',
     name: 'Virat Kohli',
     platform: 'WhatsApp',
@@ -188,18 +208,166 @@ export const MOCK_LEADS: Lead[] = [
     conversationSummary: 'Broker handling personally. Discussing payment terms.',
     confidenceScore: 98,
     chatHistory: []
-  },
-  {
-    id: 'l6',
-    name: 'Rohit Sharma',
-    platform: 'WhatsApp',
-    phone: '+919777777777',
-    budget: '3 Cr',
-    interestedIn: ['Adarsh Palm Retreat'],
-    status: LeadStatus.NEW,
-    lastActive: '30 mins ago',
-    conversationSummary: 'Inquired about villa availability.',
-    confidenceScore: 60,
-    chatHistory: []
   }
 ];
+
+export const REAL_ESTATE_ARTICLES: Record<string, string> = {
+    "Platform Overview & Navigation": `
+# Platform Overview & Navigation
+
+Welcome to the Guaq AI Real Estate Operations Portal. This dashboard is your central command center for managing luxury listings, high-net-worth leads, and AI-driven negotiations.
+
+## The Dashboard View
+Upon logging in, you see the **Overview Dashboard**. This aggregates critical real-time data:
+
+### Key Sections:
+1.  **Summary Cards**:
+    *   **Total Leads**: Active inquiries from all channels (WhatsApp, Telegram, Web).
+    *   **Site Visits**: Upcoming scheduled property viewings for the next 7 days.
+    *   **Active Inventory**: Properties currently available or under offer.
+    *   **Gatekeeper Status**: Shows if the AI is actively handling incoming chats.
+
+2.  **Pipeline Activity Graph**:
+    *   Visualizes your lead inflow vs. actual site visits converted over the last week/month.
+
+3.  **Navigation Sidebar**:
+    *   **Leads Pipeline**: Manage buyer inquiries and track their status.
+    *   **Inventory**: Upload and manage property details, media, and docs.
+    *   **Bot Simulator**: Test your AI Gatekeeper's responses.
+    *   **CRM & Campaigns**: Send personalized "Magic Drafts" to segmented lists.
+    *   **Seller Intel**: Scrape listings to find direct owners and generate pitches.
+    *   **AI Media Studio**: Virtual staging and video trailer generation.
+
+## Role-Based Access
+*   **Admin (Broker/Owner)**: Full access to settings, team management, and financial insights.
+*   **Agent**: Access to leads, inventory, and CRM tools but restricted from global settings.
+`,
+
+    "Setting up Agency Branding": `
+# Setting up Agency Branding
+
+Customize the platform to reflect your brokerage's identity. This branding is used in generated reports, email drafts, and the interface itself.
+
+## Configuration
+1.  Navigate to **Settings** via the sidebar.
+2.  **App Branding**:
+    *   **Application Name**: The name displayed on the dashboard (e.g., "Prestige Realty OS").
+    *   **Accent Color**: Choose a theme color that matches your brand guidelines.
+
+3.  **Magic Draft Identity**:
+    *   *Crucial for Automation*: Enter your Name, Brokerage Name, Phone, Email, and Website here.
+    *   The AI uses these fields to auto-sign emails and WhatsApp messages generated in the CRM and Seller Intel modules.
+    *   *Note*: If a field is left empty, it will simply be omitted from the signature.
+`,
+
+    "Managing Inventory & AI Context": `
+# Managing Inventory & AI Context
+
+The Inventory module is not just a database; it is the "brain" of your AI Gatekeeper.
+
+## Adding a Property
+1.  Click **Inventory** > **+ Add Entity**.
+2.  **Basic Details**: Enter Title, Location, Price, Configuration (BHK), and Size.
+3.  **AI Description**: Click "Auto-Generate with AI" to have Gemini write a luxury description based on the basic details.
+
+## Training the AI (RAG)
+To enable the bot to answer specific questions like "What is the maintenance fee?" or "Is it pet friendly?":
+1.  **Upload Documents**: In the property edit screen, upload PDF brochures, floor plans, or policy documents.
+2.  **Context**: The AI automatically reads these files (Retrieval Augmented Generation) to answer user queries accurately during chats.
+
+## Media
+*   Upload high-res images for **Virtual Staging**.
+*   Upload raw video clips for **AI Video Trailer** generation.
+`,
+
+    "Understanding Lead Qualification": `
+# Understanding Lead Qualification
+
+The AI Gatekeeper qualifies leads based on their interaction depth and intent.
+
+## The Confidence Score
+Every lead is assigned a score (0-100):
+*   **0-40 (Cold)**: Just browsing, vague answers, low budget match.
+*   **41-75 (Warm)**: Asking specific questions, budget aligns with inventory.
+*   **76-100 (Hot)**: Requested a site visit, confirmed budget, asked about payment plans.
+
+## Status Workflow
+1.  **NEW**: Lead just started chatting.
+2.  **QUALIFIED**: AI has confirmed Name, Budget, and Requirement.
+3.  **SITE_VISIT_SCHEDULED**: AI successfully booked a slot on your calendar.
+4.  **STOP_AI**: Manual intervention required (or requested by user).
+
+## Configuring Handover
+Go to **Settings** > **Gatekeeper Logic**.
+*   **Min Confidence Threshold**: Set the score at which you want to be notified. Default is 75%.
+*   **Auto-Reply**: Toggle this to enable/disable the bot on WhatsApp/Telegram.
+`,
+
+    "Magic Drafts & Campaigns": `
+# Magic Drafts & Campaigns
+
+The **CRM & Campaigns** module allows you to send hyper-personalized outreach at scale.
+
+## Creating a Campaign
+1.  **Select Targets**: Choose leads from your list.
+2.  **Match Properties**: Select one or more properties to pitch.
+3.  **Generate Magic Draft**: 
+    *   The AI analyzes the chat history of the selected leads and the details of the selected properties.
+    *   It writes a personalized message (Email or WhatsApp format) connecting the client's needs to the property's features.
+    *   It uses your **Magic Draft Identity** settings for the signature.
+
+## Tone Selection
+*   **Email**: Generates a professional, structured message with subject lines.
+*   **WhatsApp**: Generates a casual, emoji-friendly, short message.
+`,
+
+    "Using Virtual Staging": `
+# Using Virtual Staging
+
+Sell empty properties faster by visualizing their potential.
+
+1.  Go to **AI Media Studio** > **Virtual Staging**.
+2.  **Upload**: Upload a photo of an empty room.
+3.  **Describe Style**: Enter a prompt like "Modern luxury living room with beige sofa and warm lighting."
+4.  **Generate**: The AI (Gemini Flash Image) will overlay furniture and decor while preserving the structural integrity (walls/windows) of the room.
+5.  **Refine**: If you want to change the sofa color, just type "Change sofa to blue velvet" and update.
+`,
+
+    "Seller Intel & Acquisition": `
+# Seller Intel & Acquisition
+
+Find direct owners selling properties on listing sites and pitch your services.
+
+1.  Go to **Seller Intel**.
+2.  **Scrape**: Run the scraper (simulated) to find owner-listed properties matching your criteria.
+3.  **Buyer Matching**: The system automatically checks your active leads database to see who is looking for a property like this.
+4.  **Generate Pitch**:
+    *   Click "Pitch".
+    *   The AI writes a message to the owner: "Hi [Owner], I have [X] pre-qualified buyers looking for a [Type] in [Location] exactly like yours..."
+    *   This "Buyer-First" approach has a much higher conversion rate than cold calling.
+`
+};
+
+export const CODEBASE_CONTEXT = `
+  You are an expert on the "Guaq AI" Real Estate Platform codebase.
+  
+  CORE FEATURES:
+  1. Leads Pipeline: Displays leads from Telegram/WhatsApp. Has columns for Confidence Score, Status (New, Qualified, Site Visit, etc.).
+  2. Inventory: Management of properties with AI description generation. Supports PDF uploads for RAG (Retrieval Augmented Generation).
+  3. Calendar: Manages site visits and blocked times. Supports recurring blocks and Google/iCloud sync status.
+  4. Bot Simulator: A test environment to chat with the Gatekeeper AI. Supports voice input and image visualization.
+  5. CRM: Syncs with external CRMs. Features "Magic Draft" for personalized outreach using configured agent identity.
+  6. Media Studio: Virtual Staging (using Gemini Flash Image) and Video generation (using Veo).
+  7. Seller Intel: Scrapes listing sites to find owners selling directly. Generates "Buyer-First" pitches.
+  
+  TECH STACK:
+  - Frontend: React + Vite + TailwindCSS.
+  - AI: Google Gemini API (gemini-2.5-flash, gemini-2.5-flash-image, veo-3.1).
+  - State: React local state (useState).
+  
+  SPECIFIC LOGIC:
+  - The "Gatekeeper" calculates a confidence score based on budget and intent.
+  - "Virtual Staging" takes a raw image and a prompt to render a furnished version.
+  - "Seller Pitch" matches existing buyers in the DB to the scraped listing to create a compelling message.
+  - "Magic Draft" uses the agent's name, phone, and brokerage from Settings to sign messages.
+`;

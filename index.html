@@ -22,9 +22,9 @@
                 border: 'rgba(255, 255, 255, 0.08)',
               },
               brand: {
-                500: '#3b82f6', // Bright Blue
-                600: '#2563eb',
-                glow: '#60a5fa',
+                500: 'rgb(var(--color-brand-500) / <alpha-value>)', 
+                600: 'rgb(var(--color-brand-600) / <alpha-value>)',
+                glow: 'rgb(var(--color-brand-glow) / <alpha-value>)',
               }
             }
           }
@@ -32,6 +32,11 @@
       }
     </script>
     <style>
+      :root {
+        --color-brand-500: 59 130 246; /* Blue default */
+        --color-brand-600: 37 99 235;
+        --color-brand-glow: 96 165 250;
+      }
       body {
         background-color: #050505;
         color: #e5e5e5;

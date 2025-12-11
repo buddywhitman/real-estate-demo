@@ -1,3 +1,11 @@
+/*
+  ===========================================================================================
+  UI UTILITY: GLASS CARD
+  ===========================================================================================
+  
+  Standard container component for the Glassmorphism design system.
+*/
+
 import React from 'react';
 
 interface GlassCardProps {

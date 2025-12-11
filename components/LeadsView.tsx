@@ -1,6 +1,26 @@
+/*
+  ===========================================================================================
+  LEADS PIPELINE VIEW
+  ===========================================================================================
+  
+  ARCHITECTURE:
+  - This component visualizes the `leads` table.
+  - Current implementation performs CLIENT-SIDE filtering and sorting on `leads` prop.
+  - PRODUCTION: Move filtering to SERVER-SIDE (SQL `WHERE` / `ORDER BY`).
+  
+  API REQUIREMENTS:
+  - GET /api/leads?page=1&limit=50&status=NEW&search=john
+  - DELETE /api/leads (Bulk delete)
+  
+  FEATURES:
+  - Filtering by Name/Phone/Interest.
+  - Sorting by Recency/Confidence Score.
+  - Quick Summary View (using AI-generated summary field).
+*/
+
 import React, { useState, useMemo } from 'react';
 import { Lead, LeadStatus } from '../types';
-import { MessageSquare, Phone, Send, Search, Filter, AlertCircle, CheckCircle2, Clock, Trash2, Mail, ArrowUpDown, X, Sparkles, CalendarDays } from 'lucide-react';
+import { MessageSquare, Phone, Send, Search, Filter, AlertCircle, CheckCircle2, Clock, Trash2, Mail, ArrowUpDown, X, Sparkles, CalendarDays, Eraser, ChevronLeft, ChevronRight } from 'lucide-react';
 import { GlassCard } from './GlassCard';
 
 interface LeadsViewProps {
@@ -16,35 +36,45 @@ export const LeadsView: React.FC<LeadsViewProps> = ({ leads, onDeleteLeads }) =>
   const [sortKey, setSortKey] = useState<SortKey>('lastActive');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [activeSummary, setActiveSummary] = useState<{name: string, summary: string} | null>(null);
+  const [showOnlyVisits, setShowOnlyVisits] = useState(false);
+  
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
   // Filter Logic
   const filteredLeads = useMemo(() => {
-    return leads.filter(l => 
-      l.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    return leads.filter(l => {
+      const matchesSearch = l.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
       l.phone.includes(searchQuery) ||
       l.platform.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      l.interestedIn.some(i => i.toLowerCase().includes(searchQuery.toLowerCase()))
-    );
-  }, [leads, searchQuery]);
+      l.interestedIn.some(i => i.toLowerCase().includes(searchQuery.toLowerCase()));
+
+      if (showOnlyVisits) {
+          return matchesSearch && l.status === LeadStatus.SITE_VISIT_SCHEDULED;
+      }
+      return matchesSearch;
+    });
+  }, [leads, searchQuery, showOnlyVisits]);
 
   // Sort Logic
   const sortedLeads = useMemo(() => {
     return [...filteredLeads].sort((a, b) => {
       let valA: any = a[sortKey];
       let valB: any = b[sortKey];
-
-      // Handle specific sorts
-      if (sortKey === 'status') {
-         // Simple string sort for enum for now, could be weighted
-         valA = a.status;
-         valB = b.status;
-      }
-
       if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
       if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
       return 0;
     });
   }, [filteredLeads, sortKey, sortOrder]);
+
+  // Pagination Logic
+  const paginatedLeads = useMemo(() => {
+      const startIndex = (currentPage - 1) * rowsPerPage;
+      return sortedLeads.slice(startIndex, startIndex + rowsPerPage);
+  }, [sortedLeads, currentPage, rowsPerPage]);
+
+  const totalPages = Math.ceil(sortedLeads.length / rowsPerPage);
 
   const toggleSelectAll = () => {
     if (selectedIds.size === filteredLeads.length) {
@@ -68,12 +98,16 @@ export const LeadsView: React.FC<LeadsViewProps> = ({ leads, onDeleteLeads }) =>
     }
   };
 
+  const handleCleanup = () => {
+     alert("AI Cleanup started: Merging duplicates and archiving cold leads...");
+  };
+
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
       setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
     } else {
       setSortKey(key);
-      setSortOrder('desc'); // Default to descending for new metrics
+      setSortOrder('desc'); 
     }
   };
 
@@ -111,14 +145,29 @@ export const LeadsView: React.FC<LeadsViewProps> = ({ leads, onDeleteLeads }) =>
         </div>
         
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
-          {selectedIds.size > 0 && (
+          {selectedIds.size > 0 ? (
             <button 
               onClick={handleBulkDelete}
               className="flex items-center justify-center gap-2 px-3 py-2 bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/30 transition-colors"
             >
               <Trash2 size={16} /> Delete ({selectedIds.size})
             </button>
+          ) : (
+            <button 
+              onClick={handleCleanup}
+              className="flex items-center justify-center gap-2 px-3 py-2 bg-white/10 text-gray-300 border border-glass-border rounded-lg hover:bg-white/20 transition-colors"
+              title="Merge duplicates & remove junk"
+            >
+               <Eraser size={16} /> AI Cleanup
+            </button>
           )}
+
+          <button 
+             onClick={() => setShowOnlyVisits(!showOnlyVisits)}
+             className={`flex items-center justify-center gap-2 px-3 py-2 border rounded-lg transition-colors ${showOnlyVisits ? 'bg-green-500/20 border-green-500 text-green-400' : 'bg-glass-100 border-glass-border text-gray-400 hover:text-white'}`}
+          >
+             <Clock size={16} /> Visits
+          </button>
 
           <div className="relative group flex-1 md:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-brand-500 transition-colors" size={16} />
@@ -126,7 +175,7 @@ export const LeadsView: React.FC<LeadsViewProps> = ({ leads, onDeleteLeads }) =>
               type="text" 
               placeholder="Search by name, phone..." 
               value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
+              onChange={e => { setSearchQuery(e.target.value); setCurrentPage(1); }}
               className="w-full bg-glass-100 border border-glass-border rounded-lg pl-10 pr-4 py-2 text-sm text-white focus:outline-none focus:border-brand-500 transition-all"
             />
           </div>
@@ -138,7 +187,6 @@ export const LeadsView: React.FC<LeadsViewProps> = ({ leads, onDeleteLeads }) =>
                  <span className="text-xs font-medium uppercase">{sortKey}</span>
                </span>
              </button>
-             {/* Simple Dropdown for Sort */}
              <div className="absolute right-0 top-full mt-2 w-40 bg-[#151515] border border-glass-border rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10 flex flex-col overflow-hidden">
                 <button onClick={() => handleSort('lastActive')} className="px-4 py-2 text-left text-sm text-gray-400 hover:bg-white/10 hover:text-white">Recency</button>
                 <button onClick={() => handleSort('confidenceScore')} className="px-4 py-2 text-left text-sm text-gray-400 hover:bg-white/10 hover:text-white">Confidence</button>
@@ -180,7 +228,7 @@ export const LeadsView: React.FC<LeadsViewProps> = ({ leads, onDeleteLeads }) =>
               </tr>
             </thead>
             <tbody className="divide-y divide-glass-border">
-              {sortedLeads.map((lead) => (
+              {paginatedLeads.map((lead) => (
                 <tr key={lead.id} className={`hover:bg-white/5 transition-colors group ${selectedIds.has(lead.id) ? 'bg-brand-500/10' : ''}`}>
                   <td className="p-4">
                     <input 
@@ -273,15 +321,39 @@ export const LeadsView: React.FC<LeadsViewProps> = ({ leads, onDeleteLeads }) =>
         </div>
         )}
         <div className="p-4 border-t border-glass-border flex justify-between items-center text-xs text-gray-500">
-           <span>Showing {filteredLeads.length} leads</span>
-           <div className="flex gap-2">
-              <button disabled className="disabled:opacity-30 hover:text-white px-2 py-1 rounded hover:bg-white/5">Previous</button>
-              <button disabled className="disabled:opacity-30 hover:text-white px-2 py-1 rounded hover:bg-white/5">Next</button>
+           <div className="flex items-center gap-4">
+             <span>Showing {paginatedLeads.length} of {filteredLeads.length} leads</span>
+             <select 
+                value={rowsPerPage} 
+                onChange={(e) => { setRowsPerPage(Number(e.target.value)); setCurrentPage(1); }}
+                className="bg-white/5 border border-glass-border rounded px-2 py-1 text-xs text-gray-300 focus:outline-none"
+             >
+                <option value={10}>10 rows</option>
+                <option value={20}>20 rows</option>
+                <option value={50}>50 rows</option>
+             </select>
+           </div>
+           
+           <div className="flex gap-2 items-center">
+              <span className="mr-2">Page {currentPage} of {totalPages}</span>
+              <button 
+                disabled={currentPage === 1} 
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                className="disabled:opacity-30 hover:text-white p-1 rounded hover:bg-white/5"
+              >
+                  <ChevronLeft size={16} />
+              </button>
+              <button 
+                disabled={currentPage === totalPages} 
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                className="disabled:opacity-30 hover:text-white p-1 rounded hover:bg-white/5"
+              >
+                  <ChevronRight size={16} />
+              </button>
            </div>
         </div>
       </div>
 
-      {/* Summary Modal */}
       {activeSummary && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
           <GlassCard className="w-full max-w-md animate-fade-in-up">

@@ -1,17 +1,58 @@
-import React, { useState, useEffect } from 'react';
+/* 
+  ===========================================================================================
+  GUAQ AI - LUXURY REAL ESTATE AUTOMATION DASHBOARD
+  ===========================================================================================
+  
+  OVERVIEW:
+  This React SPA serves as the frontend dashboard for the "Guaq AI" Agency Platform.
+  It is designed to be Multi-Tenant, serving multiple agency clients identified by `client_id`.
+  
+  AGENCY INFRASTRUCTURE (DOCKER):
+  - Postgres: Stores Client Config & WhatsApp Logs.
+  - Dify: Provides the AI Brain (LLM + RAG).
+  - N8N: Handles WhatsApp/Telegram automation workflows.
+  - MinIO: Stores property assets (Images/PDFs).
+  
+  BACKEND INTEGRATION POINTS:
+  1. `useEffect` for Data Fetching:
+     - Should call `GET /api/leads` (Mapped from `whatsapp_log` in Postgres).
+     - Should call `GET /api/inventory` (Stored in Postgres, assets in MinIO).
+  2. `handleBotUpdate`:
+     - Listens to Bot Simulator events. 
+     - Should fire `POST /api/chat` which proxies to Dify API.
+  3. `settings`:
+     - Persist this object to the `clients` table in Postgres (JSONB column).
+  
+  CRITICAL FEATURES:
+  - Role-based Access: `userRole` state determines features shown (Admin vs Agent).
+  - Activity Logging: Centralized `logs` array tracks all system events.
+  
+  ===========================================================================================
+*/
+
+import React, { useState, useEffect, useMemo } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { LeadsView } from './components/LeadsView';
 import { InventoryView } from './components/InventoryView';
 import { SettingsView } from './components/SettingsView';
 import { BotSimulator } from './components/BotSimulator';
 import { SupportView } from './components/SupportView';
+import { CalendarView } from './components/CalendarView';
+import { CrmView } from './components/CrmView';
+import { MediaStudioView } from './components/MediaStudioView';
+import { InsightsView } from './components/InsightsView';
+import { ComplianceView } from './components/ComplianceView';
+import { SellerScraperView } from './components/SellerScraperView';
 import { GlassCard } from './components/GlassCard';
 import { MOCK_LEADS, MOCK_PROPERTIES, MOCK_CHART_DATA } from './constants';
-import { Property, Lead, AppSettings, ActivityLog, LeadStatus, ChartData } from './types';
-import { Bell, Activity, TrendingUp, Users, CheckCircle, AlertTriangle, Clock, Power, Menu } from 'lucide-react';
+import { Property, Lead, AppSettings, ActivityLog, LeadStatus, ChartData, CalendarEvent, BrandingConfig } from './types';
+import { Bell, Activity, TrendingUp, Users, Power, Menu, X, Filter, Download } from 'lucide-react';
 import { GatekeeperResponse } from './services/geminiService';
+import Login from './components/Login';
+import Footer from './components/Footer';
 
-// Main Dashboard Overview Component
+// --- DASHBOARD WIDGETS ---
+// In a real app, break these into separate files: `components/dashboard/OverviewWidgets.tsx`
 const DashboardOverview = ({ 
   leadsCount, 
   propertiesCount,
@@ -28,6 +69,7 @@ const DashboardOverview = ({
   onToggleAi: () => void
 }) => (
   <div className="space-y-6 animate-fade-in">
+    {/* KPI CARDS */}
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       <GlassCard className="flex items-center justify-between">
         <div>
@@ -69,7 +111,7 @@ const DashboardOverview = ({
            <div>
               <p className={`text-xs uppercase tracking-wider font-semibold ${isAiActive ? 'text-brand-200' : 'text-gray-400'}`}>AI Gatekeeper</p>
               <h3 className="text-xl font-bold text-white mt-1">{isAiActive ? 'Active' : 'Paused'}</h3>
-              <p className="text-xs mt-1 opacity-70 text-white">{isAiActive ? 'Processing incoming chats...' : 'Auto-replies disabled.'}</p>
+              <p className="text-xs mt-1 opacity-70 text-white">{isAiActive ? 'Processing incoming chats via n8n...' : 'Auto-replies disabled.'}</p>
            </div>
            <button 
              onClick={onToggleAi}
@@ -83,6 +125,7 @@ const DashboardOverview = ({
     </div>
 
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:h-[450px]">
+       {/* ACTIVITY CHART */}
        <GlassCard className="lg:col-span-2 relative overflow-hidden group flex flex-col h-[300px] lg:h-auto">
           <div className="flex justify-between items-center mb-6">
              <h3 className="text-lg font-medium text-white">Pipeline Activity (Last 7 Days)</h3>
@@ -96,7 +139,6 @@ const DashboardOverview = ({
              {chartData.map((data, i) => (
                <div key={i} className="flex-1 flex flex-col justify-end items-center gap-2 group/bar h-full">
                   <div className="w-full flex gap-1 h-full items-end justify-center">
-                    {/* Leads Bar */}
                     <div 
                       className="w-1/2 bg-brand-500 rounded-t-sm opacity-60 group-hover/bar:opacity-100 transition-all relative"
                       style={{ height: `${(data.leads / 20) * 100}%` }}
@@ -105,7 +147,6 @@ const DashboardOverview = ({
                          {data.leads} Leads
                        </div>
                     </div>
-                    {/* Visits Bar */}
                     <div 
                       className="w-1/2 bg-purple-500 rounded-t-sm opacity-60 group-hover/bar:opacity-100 transition-all relative"
                       style={{ height: `${(data.visits / 20) * 100}%` }}
@@ -121,15 +162,16 @@ const DashboardOverview = ({
           </div>
        </GlassCard>
        
+       {/* RECENT LOGS WIDGET */}
        <GlassCard className="flex flex-col h-[300px] lg:h-full overflow-hidden">
           <div className="flex items-center justify-between mb-4 shrink-0">
              <h3 className="text-lg font-medium text-white">Gatekeeper Logs</h3>
              {isAiActive && <span className="text-xs bg-green-500/10 text-green-400 px-2 py-1 rounded">Live</span>}
              {!isAiActive && <span className="text-xs bg-red-500/10 text-red-400 px-2 py-1 rounded">Paused</span>}
           </div>
-          <div className="space-y-4 overflow-y-auto pr-2 flex-1 scrollbar-thin scrollbar-thumb-gray-800 scrollbar-track-transparent">
+          <div className="space-y-4 overflow-y-auto pr-2 flex-1 scrollbar-thin scrollbar-thumb-glass-border scrollbar-track-transparent">
              {logs.length === 0 && <p className="text-gray-500 text-xs italic p-2">No recent system activity.</p>}
-             {logs.map(log => (
+             {logs.slice(0, 10).map(log => (
                <div key={log.id} className={`flex gap-3 items-start border-l-2 pl-3 py-1 ${
                  log.severity === 'success' ? 'border-green-500 bg-green-500/5' :
                  log.severity === 'warning' ? 'border-yellow-500 bg-yellow-500/5' :
@@ -151,27 +193,78 @@ const DashboardOverview = ({
 );
 
 export default function App() {
+  // --- GLOBAL STATE ---
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userRole, setUserRole] = useState<'admin' | 'agent'>('admin');
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isAiActive, setIsAiActive] = useState(true);
-  const [isNotifOpen, setIsNotifOpen] = useState(false);
   
-  // Track the current active simulator lead ID to ensure persistent updates to the same row
+  // Notification / Logs State
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const [isLogModalOpen, setIsLogModalOpen] = useState(false);
+  const [logFilter, setLogFilter] = useState('All'); // '24h', '7d', 'All'
+
+  // Simulator Context State
   const [simulatorLeadId, setSimulatorLeadId] = useState<string | null>(null);
 
+  // DATA STORES (Replace with API Calls in Production)
   const [properties, setProperties] = useState<Property[]>(MOCK_PROPERTIES);
   const [leads, setLeads] = useState<Lead[]>(MOCK_LEADS);
+  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([
+      { id: '1', title: 'Site Visit: Sobha Opal', start: new Date(new Date().setHours(14,0)), end: new Date(new Date().setHours(15,0)), type: 'VISIT' }
+  ]);
+
   const [logs, setLogs] = useState<ActivityLog[]>([
-    { id: '1', type: 'SYSTEM', message: 'System Initialized', subtext: 'Connecting to Telegram Gatekeeper...', timestamp: new Date(), severity: 'info' }
+    { id: '1', type: 'SYSTEM', message: 'System Initialized', subtext: 'Connecting to Dify Gatekeeper...', timestamp: new Date(), severity: 'info' }
   ]);
   
   const [settings, setSettings] = useState<AppSettings>({
     appName: 'Guaq AI',
-    brokerName: 'Guaq Brokerage',
+    brokerName: 'Guaq Brokerage', // Legacy field backup
     autoReply: true,
     minConfidenceThreshold: 75,
-    notificationEmail: 'broker@guaq.ai'
+    notificationEmail: 'broker@guaq.ai',
+    enableAiBooking: true,
+    workHoursStart: '09:00',
+    workHoursEnd: '18:00',
+    accentColor: 'blue',
+    messageSalutation: 'Hi {name},',
+    messageSignature: 'Best,\n{brokerName}',
+    workDays: [1, 2, 3, 4, 5],
+    
+    // New Identity Defaults for Magic Draft
+    agentName: 'Your Name',
+    brokerageName: 'Guaq Realty',
+    agentPhone: '',
+    agentEmail: '',
+    agentWebsite: ''
   });
+
+  // Apply Accent Color via CSS Variables
+  useEffect(() => {
+    const root = document.documentElement;
+    let color500 = '59 130 246'; // blue default
+    let color600 = '37 99 235';
+    let colorGlow = '96 165 250';
+
+    switch(settings.accentColor) {
+        case 'purple': 
+            color500 = '168 85 247'; color600 = '147 51 234'; colorGlow = '192 132 252'; break;
+        case 'green':
+            color500 = '34 197 94'; color600 = '22 163 74'; colorGlow = '74 222 128'; break;
+        case 'orange':
+            color500 = '249 115 22'; color600 = '234 88 12'; colorGlow = '251 146 60'; break;
+        case 'pink':
+            color500 = '236 72 153'; color600 = '219 39 119'; colorGlow = '244 114 182'; break;
+    }
+    
+    root.style.setProperty('--color-brand-500', color500);
+    root.style.setProperty('--color-brand-600', color600);
+    root.style.setProperty('--color-brand-glow', colorGlow);
+  }, [settings.accentColor]);
+
+  // --- HELPER FUNCTIONS ---
 
   const addLog = (message: string, subtext: string, severity: ActivityLog['severity']) => {
     const newLog: ActivityLog = {
@@ -182,8 +275,21 @@ export default function App() {
       timestamp: new Date(),
       severity
     };
-    setLogs(prev => [newLog, ...prev].slice(0, 50)); // Keep last 50
+    // Keep log size manageable in client memory
+    setLogs(prev => [newLog, ...prev].slice(0, 100)); 
   };
+
+  // Filter logs for the full activity modal
+  const filteredLogs = useMemo(() => {
+      const now = new Date();
+      return logs.filter(log => {
+          if (logFilter === 'All') return true;
+          const hoursDiff = (now.getTime() - log.timestamp.getTime()) / (1000 * 60 * 60);
+          if (logFilter === '24h') return hoursDiff <= 24;
+          if (logFilter === '7d') return hoursDiff <= 168;
+          return true;
+      });
+  }, [logs, logFilter]);
 
   const handleToggleAi = () => {
     const newState = !isAiActive;
@@ -191,7 +297,9 @@ export default function App() {
     addLog('System Status Change', newState ? 'AI Gatekeeper Resumed' : 'AI Gatekeeper Paused', newState ? 'success' : 'warning');
   };
 
+  // --- CRUD ACTIONS (Pass to Components) ---
   const handleAddProperty = (newProp: Property) => {
+    // API: await fetch('/api/inventory', { method: 'POST', body: JSON.stringify(newProp) });
     setProperties([newProp, ...properties]);
     addLog('Property Added', newProp.title, 'success');
   };
@@ -212,27 +320,22 @@ export default function App() {
     addLog('Leads Deleted', `${ids.length} records removed`, 'danger');
   };
 
+  // --- BOT SIMULATOR INTEGRATION ---
   const handleBotUpdate = (data: GatekeeperResponse) => {
     if (!isAiActive) return; 
 
     if (!data.action || data.action === 'NONE') return;
 
-    // Handle CREATE_LEAD, UPDATE_LEAD, and STOP_AI by ensuring the lead exists and is updated
     if (data.action === 'CREATE_LEAD' || data.action === 'UPDATE_LEAD' || data.action === 'STOP_AI') {
       const extracted = data.extractedData || {};
-
-      // Determine the name: use extracted name from AI, or fallback
       const currentName = extracted.name || 'New Lead';
       
-      // Determine status override for STOP_AI
       let newStatus = extracted.status ? (extracted.status as LeadStatus) : LeadStatus.NEW;
       if (data.action === 'STOP_AI') {
           newStatus = LeadStatus.STOP_AI;
       }
       
-      // Try to find an existing lead for this simulator session
       let existingLeadIndex = -1;
-      
       if (simulatorLeadId) {
          existingLeadIndex = leads.findIndex(l => l.id === simulatorLeadId);
       }
@@ -243,7 +346,7 @@ export default function App() {
          const updatedLead: Lead = { 
             ...oldLead, 
             ...extracted,
-            name: extracted.name || oldLead.name, // Update name if AI found it
+            name: extracted.name || oldLead.name, 
             status: newStatus,
             interestedIn: [...new Set([...oldLead.interestedIn, ...(extracted.interestedIn || [])])],
             siteVisitTime: extracted.siteVisitTime || oldLead.siteVisitTime,
@@ -254,9 +357,18 @@ export default function App() {
          newLeads[existingLeadIndex] = updatedLead;
          setLeads(newLeads);
          
-         // Log special events
          if (updatedLead.status === LeadStatus.SITE_VISIT_SCHEDULED) {
             addLog('Site Visit Scheduled', `${updatedLead.name} @ ${updatedLead.siteVisitTime || 'TBD'}`, 'success');
+            // Mock adding to calendar
+            if (updatedLead.siteVisitTime) {
+                setCalendarEvents(prev => [...prev, {
+                    id: Math.random().toString(),
+                    title: `Visit: ${updatedLead.name}`,
+                    start: new Date(new Date().setHours(16,0)), // Mock time parsing
+                    end: new Date(new Date().setHours(17,0)),
+                    type: 'VISIT'
+                }]);
+            }
          } else if (updatedLead.status === LeadStatus.STOP_AI) {
             addLog('Manual Intervention', `Bot stopped for ${updatedLead.name}`, 'danger');
          } else {
@@ -282,7 +394,7 @@ export default function App() {
            ...extracted
          } as Lead;
          
-         setSimulatorLeadId(newId); // Bind this session to this new lead
+         setSimulatorLeadId(newId);
          setLeads(prev => [newLead, ...prev]);
          
          if (newLead.status === LeadStatus.STOP_AI) {
@@ -294,46 +406,54 @@ export default function App() {
     }
   };
 
+  // --- Auth & Routing Logic ---
+  if (!isAuthenticated) {
+      return (
+          <Login 
+            onLogin={(role) => {
+                setUserRole(role);
+                setIsAuthenticated(true);
+            }}
+            branding={{
+                appName: settings.appName,
+                themeColor: 'brand'
+            }}
+          />
+      );
+  }
+
   return (
-    <div className="min-h-screen bg-[#050505] text-white font-sans selection:bg-brand-500/30">
+    <div className="min-h-screen bg-[#050505] text-white font-sans selection:bg-brand-500/30 flex flex-col">
       <Sidebar 
         activeTab={activeTab} 
         onTabChange={setActiveTab} 
         settings={settings} 
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
+        onLogout={() => setIsAuthenticated(false)}
+        userRole={userRole}
       />
       
-      <main className="lg:pl-64 transition-all duration-300 w-full">
-        {/* Header */}
+      <main className="lg:pl-64 transition-all duration-300 w-full flex-1 flex flex-col">
+        {/* TOP HEADER */}
         <header className="sticky top-0 z-30 bg-[#050505]/80 backdrop-blur-md border-b border-glass-border px-4 md:px-8 py-4 flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <button 
-              onClick={() => setIsSidebarOpen(true)}
-              className="lg:hidden p-2 rounded-lg text-gray-400 hover:bg-white/5 hover:text-white"
-            >
+            <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 rounded-lg text-gray-400 hover:bg-white/5 hover:text-white">
               <Menu size={24} />
             </button>
             <h1 className="text-xl font-bold capitalize truncate">
-              {activeTab === 'dashboard' ? 'Overview' : 
-               activeTab === 'simulator' ? 'Gatekeeper Simulator' : 
-               activeTab}
+              {activeTab === 'crm' ? 'CRM & Campaigns' : activeTab === 'media' ? 'AI Media Studio' : activeTab === 'scraper' ? 'Seller Intel' : activeTab.replace(/([A-Z])/g, ' $1').trim()}
             </h1>
           </div>
 
           <div className="flex items-center gap-4">
             <div className="relative">
-              <button 
-                onClick={() => setIsNotifOpen(!isNotifOpen)}
-                className="relative p-2 rounded-full hover:bg-white/5 text-gray-400 hover:text-white transition-colors"
-              >
+              <button onClick={() => setIsNotifOpen(!isNotifOpen)} className="relative p-2 rounded-full hover:bg-white/5 text-gray-400 hover:text-white transition-colors">
                 <Bell size={20} />
                 {logs.length > 0 && <span className="absolute top-1.5 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-black"></span>}
               </button>
-
-              {/* Notification Dropdown */}
               {isNotifOpen && (
-                <div className="absolute right-0 top-full mt-2 w-72 md:w-80 bg-[#151515] border border-glass-border rounded-xl shadow-2xl overflow-hidden z-50">
+                <div className="absolute right-0 top-full mt-2 w-72 md:w-80 bg-[#151515] border border-glass-border rounded-xl shadow-2xl overflow-hidden z-50 animate-fade-in-up">
                    <div className="p-3 border-b border-glass-border bg-white/5">
                       <h4 className="text-sm font-semibold text-white">Notifications</h4>
                    </div>
@@ -352,7 +472,12 @@ export default function App() {
                       ))}
                    </div>
                    <div className="p-2 text-center border-t border-glass-border bg-white/5">
-                      <button className="text-xs text-gray-400 hover:text-white">View Full Activity Log</button>
+                      <button 
+                        onClick={() => { setIsNotifOpen(false); setIsLogModalOpen(true); }}
+                        className="text-xs text-gray-400 hover:text-white transition-colors"
+                      >
+                          View Full Activity Log
+                      </button>
                    </div>
                 </div>
               )}
@@ -360,37 +485,93 @@ export default function App() {
           </div>
         </header>
 
-        {/* Content Area */}
-        <div className="p-4 md:p-8 max-w-7xl mx-auto">
-          {activeTab === 'dashboard' && (
-             <DashboardOverview 
-                leadsCount={leads.length} 
-                propertiesCount={properties.length} 
-                logs={logs}
-                chartData={MOCK_CHART_DATA}
-                isAiActive={isAiActive}
-                onToggleAi={handleToggleAi}
-             />
-          )}
-          
+        {/* MAIN CONTENT AREA */}
+        <div className="p-4 md:p-8 max-w-7xl mx-auto w-full flex-1">
+          {activeTab === 'dashboard' && <DashboardOverview leadsCount={leads.length} propertiesCount={properties.length} logs={logs} chartData={MOCK_CHART_DATA} isAiActive={isAiActive} onToggleAi={handleToggleAi} />}
           {activeTab === 'leads' && <LeadsView leads={leads} onDeleteLeads={handleDeleteLeads} />}
-          
-          {activeTab === 'properties' && (
-            <InventoryView 
-              properties={properties} 
-              onAddProperty={handleAddProperty} 
-              onUpdateProperty={handleUpdateProperty}
-              onDeleteProperty={handleDeleteProperty}
-            />
-          )}
-          
-          {activeTab === 'simulator' && <BotSimulator inventory={properties} onLeadUpdate={handleBotUpdate} />}
-          
+          {activeTab === 'properties' && <InventoryView properties={properties} onAddProperty={handleAddProperty} onUpdateProperty={handleUpdateProperty} onDeleteProperty={handleDeleteProperty} />}
+          {activeTab === 'simulator' && <BotSimulator inventory={properties} onLeadUpdate={handleBotUpdate} settings={settings} />}
+          {activeTab === 'calendar' && <CalendarView events={calendarEvents} onAddEvent={(e) => setCalendarEvents([...calendarEvents, e])} />}
+          {activeTab === 'crm' && <CrmView leads={leads} settings={settings} />}
+          {activeTab === 'media' && <MediaStudioView properties={properties} />}
+          {activeTab === 'insights' && <InsightsView data={MOCK_CHART_DATA} />}
+          {activeTab === 'compliance' && <ComplianceView />}
+          {activeTab === 'scraper' && <SellerScraperView settings={settings} />}
           {activeTab === 'settings' && <SettingsView settings={settings} onUpdate={setSettings} />}
-          
           {activeTab === 'support' && <SupportView />}
         </div>
+        
+        {/* Main App Footer */}
+        <div className="mt-auto">
+            <Footer />
+        </div>
       </main>
+
+      {/* FULL SCREEN ACTIVITY LOG MODAL */}
+      {isLogModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in" onClick={() => setIsLogModalOpen(false)}>
+              <GlassCard className="w-full max-w-3xl h-[80vh] flex flex-col relative" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex justify-between items-center mb-6 pb-4 border-b border-glass-border">
+                      <div className="flex items-center gap-3">
+                          <Activity size={20} className="text-brand-400"/>
+                          <h2 className="text-xl font-bold text-white">System Activity Log</h2>
+                      </div>
+                      <div className="flex items-center gap-4">
+                          <div className="flex bg-white/5 rounded-lg p-1">
+                              {['24h', '7d', 'All'].map(filter => (
+                                  <button 
+                                    key={filter} 
+                                    onClick={() => setLogFilter(filter)}
+                                    className={`px-3 py-1 text-xs rounded transition-colors ${logFilter === filter ? 'bg-brand-600 text-white' : 'text-gray-400 hover:text-white'}`}
+                                  >
+                                      {filter === 'All' ? 'All Time' : `Last ${filter}`}
+                                  </button>
+                              ))}
+                          </div>
+                          <button onClick={() => setIsLogModalOpen(false)} className="text-gray-400 hover:text-white">
+                              <X size={24}/>
+                          </button>
+                      </div>
+                  </div>
+                  
+                  <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+                      {filteredLogs.length === 0 ? (
+                          <div className="h-full flex flex-col items-center justify-center text-gray-500 opacity-50">
+                              <Filter size={48} className="mb-4"/>
+                              <p>No activity logs found for this period.</p>
+                          </div>
+                      ) : (
+                          <div className="space-y-2">
+                              {filteredLogs.map(log => (
+                                  <div key={log.id} className="p-3 bg-white/5 rounded-lg border border-glass-border flex justify-between items-start hover:bg-white/10 transition-colors">
+                                      <div className="flex gap-3">
+                                          <div className={`mt-1 w-2 h-2 rounded-full shrink-0 ${
+                                              log.severity === 'success' ? 'bg-green-500' :
+                                              log.severity === 'danger' ? 'bg-red-500' :
+                                              log.severity === 'warning' ? 'bg-yellow-500' : 'bg-blue-500'
+                                          }`}></div>
+                                          <div>
+                                              <p className="text-sm font-medium text-white">{log.message}</p>
+                                              <p className="text-xs text-gray-400">{log.subtext}</p>
+                                          </div>
+                                      </div>
+                                      <span className="text-xs text-gray-500 whitespace-nowrap">
+                                          {log.timestamp.toLocaleDateString()} {log.timestamp.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                      </span>
+                                  </div>
+                              ))}
+                          </div>
+                      )}
+                  </div>
+                  
+                  <div className="pt-4 mt-4 border-t border-glass-border flex justify-end">
+                      <button className="flex items-center gap-2 text-xs text-brand-400 hover:text-brand-300">
+                          <Download size={14}/> Export Logs to CSV
+                      </button>
+                  </div>
+              </GlassCard>
+          </div>
+      )}
     </div>
   );
 }
