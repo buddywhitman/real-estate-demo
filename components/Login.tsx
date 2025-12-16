@@ -309,9 +309,9 @@ const Login: React.FC<LoginProps> = ({ onLogin, branding }) => {
                                             <p className="text-sm text-gray-500 mt-1">For independent realtors</p>
                                         </div>
                                         <div className="mb-6">
-                                            <span className="text-3xl font-bold text-white">$199</span>
+                                            <span className="text-3xl font-bold text-white">$399</span>
                                             <span className="text-gray-500">/mo</span>
-                                            <p className="text-xs text-gray-400 mt-1">or ₹15,000 INR /mo billed annually</p>
+                                            <p className="text-xs text-gray-400 mt-1">or ₹30,000 INR /mo billed annually</p>
                                         </div>
                                         <div className="space-y-3 mb-8 flex-1">
                                             {['AI Lead Qualification', 'WhatsApp/Telegram Bot', 'Inventory Management', 'Basic CRM Sync'].map(f => (
@@ -331,9 +331,9 @@ const Login: React.FC<LoginProps> = ({ onLogin, branding }) => {
                                             <p className="text-sm text-brand-200 mt-1">For high-volume teams</p>
                                         </div>
                                         <div className="mb-6">
-                                            <span className="text-4xl font-bold text-white">$499</span>
+                                            <span className="text-4xl font-bold text-white">$699</span>
                                             <span className="text-gray-400">/mo</span>
-                                            <p className="text-xs text-brand-300 mt-1">or ₹40,000 INR /mo billed annually</p>
+                                            <p className="text-xs text-brand-300 mt-1">or ₹50,000 INR /mo billed annually</p>
                                         </div>
                                         <div className="space-y-3 mb-8 flex-1">
                                             {['Everything in Solo', 'AI Video Studio (Veo)', 'Virtual Staging', 'Campaign Management', 'Advanced Analytics'].map(f => (
