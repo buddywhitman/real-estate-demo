@@ -333,10 +333,10 @@ const Login: React.FC<LoginProps> = ({ onLogin, branding }) => {
                                         <div className="mb-6">
                                             <span className="text-4xl font-bold text-white">$699</span>
                                             <span className="text-gray-400">/mo</span>
-                                            <p className="text-xs text-brand-300 mt-1">or ₹50,000 INR /mo billed annually</p>
+                                            <p className="text-xs text-brand-300 mt-1">or ₹56,000 INR /mo billed annually</p>
                                         </div>
                                         <div className="space-y-3 mb-8 flex-1">
-                                            {['Everything in Solo', 'AI Video Studio (Veo)', 'Virtual Staging', 'Campaign Management', 'Advanced Analytics'].map(f => (
+                                            {['Everything in Solo', 'AI Video Studio (Veo)', 'Content Creation', 'Campaign Management', 'Advanced Analytics'].map(f => (
                                                 <div key={f} className="flex items-center gap-3 text-sm text-white font-medium">
                                                     <CheckCircle2 size={16} className="text-brand-400 shrink-0"/> {f}
                                                 </div>
