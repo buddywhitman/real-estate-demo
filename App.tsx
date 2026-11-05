@@ -40,9 +40,11 @@ import { GatekeeperResponse } from './services/geminiService';
 import Footer from './components/Footer';
 import { LoadingScreen } from './components/LoadingScreen';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import LandingPage from './components/LandingPage';
 
 // Lazy Loaded Components
 const Login = lazy(() => import('./components/Login'));
+const Docs = lazy(() => import('./components/Docs'));
 const DashboardOverview = lazy(() => import('./components/DashboardOverview').then(module => ({ default: module.DashboardOverview })));
 const LeadsView = lazy(() => import('./components/LeadsView').then(module => ({ default: module.LeadsView })));
 const InventoryView = lazy(() => import('./components/InventoryView').then(module => ({ default: module.InventoryView })));
@@ -70,6 +72,8 @@ export default function App() {
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [isLogModalOpen, setIsLogModalOpen] = useState(false);
   const [logFilter, setLogFilter] = useState('All'); // '24h', '7d', 'All'
+  const [showLanding, setShowLanding] = useState(true);
+  const [showDocs, setShowDocs] = useState(false);
 
   // Simulator Context State
   const [simulatorLeadId, setSimulatorLeadId] = useState<string | null>(null);
@@ -271,20 +275,30 @@ export default function App() {
 
   // --- Auth & Routing Logic ---
   if (!isAuthenticated) {
+    if (showDocs) {
       return (
-          <Suspense fallback={<LoadingScreen />}>
-              <Login 
-                onLogin={(role) => {
-                    setUserRole(role);
-                    setIsAuthenticated(true);
-                }}
-                branding={{
-                    appName: settings.appName,
-                    themeColor: 'brand'
-                }}
-              />
-          </Suspense>
+        <Suspense fallback={<LoadingScreen />}>
+          <Docs onBack={() => setShowDocs(false)} />
+        </Suspense>
       );
+    }
+    if (showLanding) {
+      return <LandingPage onLoginClick={() => setShowLanding(false)} onViewDocs={() => setShowDocs(true)} branding={{ appName: settings.appName }} />;
+    }
+    return (
+        <Suspense fallback={<LoadingScreen />}>
+            <Login 
+              onLogin={(role) => {
+                  setUserRole(role);
+                  setIsAuthenticated(true);
+              }}
+              branding={{
+                  appName: settings.appName,
+                  themeColor: 'brand'
+              }}
+            />
+        </Suspense>
+    );
   }
 
   return (
@@ -390,7 +404,7 @@ export default function App() {
         
         {/* Main App Footer */}
         <div className="mt-auto">
-            <Footer />
+            <Footer onLogout={() => { setIsAuthenticated(false); setShowLanding(true); }} />
         </div>
       </main>
 

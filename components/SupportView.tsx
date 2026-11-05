@@ -198,8 +198,7 @@ export const SupportView: React.FC = () => {
              <p className="text-gray-400 text-sm mb-4">Still need support?</p>
              <div className="flex justify-center gap-4">
                 <a 
-                    href="https://guaq.framer.ai/contact-us"
-                    target="_blank"
+                                                   href="https://guaqai.me/contact-us"                    target="_blank"
                     rel="noopener noreferrer" 
                     className="px-6 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-sm font-medium transition flex items-center gap-2"
                 >
